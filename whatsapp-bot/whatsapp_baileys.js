@@ -8,7 +8,7 @@ let firebaseStorage = null;
 let storageBucket = null;
 let isFirebaseConnected = false;
 
-async function initializeFirebase() {
+const initializeFirebase = async () => {
     try {
         if (!process.env.FIREBASE_KEY) {
             console.log('⚠️ FIREBASE_KEY não encontrada - funcionando sem Firebase');
@@ -47,10 +47,10 @@ async function initializeFirebase() {
         console.error('❌ Erro ao inicializar Firebase:', error.message);
         isFirebaseConnected = false;
     }
-}
+};
 
 // Função para salvar mensagem no Firebase
-async function saveMessageToFirebase(from, message, direction = 'received') {
+const saveMessageToFirebase = async (from, message, direction = 'received') => {
     try {
         if (!firebaseDb) return;
         
@@ -67,10 +67,10 @@ async function saveMessageToFirebase(from, message, direction = 'received') {
     } catch (error) {
         console.error('❌ Erro ao salvar mensagem no Firebase:', error);
     }
-}
+};
 
 // Função para buscar dados do usuário no Firebase
-async function getUserDataFromFirebase(phoneNumber) {
+const getUserDataFromFirebase = async (phoneNumber) => {
     try {
         if (!firebaseDb) return null;
         
@@ -100,7 +100,7 @@ async function getUserDataFromFirebase(phoneNumber) {
         console.error('❌ Erro ao buscar dados do usuário:', error);
         return null;
     }
-}
+};
 
 // Rate limiting para evitar spam de fallback
 class MessageRateLimit {
@@ -952,9 +952,20 @@ ${message}
                 if (responseData && responseData.response) {
                     await this.sendMessage(from, responseData.response);
                     await saveMessageToFirebase(from, responseData.response, 'sent');
+                } else if (responseData && responseData.status === 'ignored') {
+                    // Mensagem ignorada pelo backend - não enviar nada
+                    console.log('🔇 Mensagem ignorada pelo backend (não autorizada)');
                 } else {
-                    console.warn('⚠️ Backend não retornou campo "response"');
+                    console.warn('⚠️ Backend não retornou campo "response" válido');
                     console.warn('📋 Estrutura recebida:', Object.keys(responseData || {}));
+                    
+                    // FALLBACK: Se backend não retornou response válido, usar mensagem padrão
+                    const fallbackMessage = "Obrigado pela sua mensagem! Nossa equipe entrará em contato em breve.";
+                    if (this.rateLimit.canSendFallback(from)) {
+                        await this.sendMessage(from, fallbackMessage);
+                        await saveMessageToFirebase(from, fallbackMessage, 'sent');
+                        console.log('📤 Mensagem fallback enviada devido a response inválido');
+                    }
                 }
             } else {
                 const errorText = await response.text();
