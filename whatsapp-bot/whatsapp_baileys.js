@@ -948,24 +948,19 @@ ${message}
                 console.log('✅ Mensagem encaminhada com sucesso');
                 console.log('📋 Dados da resposta:', responseData);
                 
-                // Só envia resposta válida do backend
-                if (responseData && responseData.response) {
-                    await this.sendMessage(from, responseData.response);
-                    await saveMessageToFirebase(from, responseData.response, 'sent');
-                } else if (responseData && responseData.status === 'ignored') {
+                // ✅ CORREÇÃO: Verificar se deve ignorar mensagem primeiro
+                if (responseData && responseData.status === 'ignored') {
                     // Mensagem ignorada pelo backend - não enviar nada
                     console.log('🔇 Mensagem ignorada pelo backend (não autorizada)');
+                } else if (responseData && typeof responseData.response === 'string' && responseData.response.trim() !== '') {
+                    // ✅ CORREÇÃO: Só envia se response existe, é string e não está vazio
+                    await this.sendMessage(from, responseData.response);
+                    await saveMessageToFirebase(from, responseData.response, 'sent');
+                    console.log('📤 Resposta do backend enviada com sucesso');
                 } else {
-                    console.warn('⚠️ Backend não retornou campo "response" válido');
-                    console.warn('📋 Estrutura recebida:', Object.keys(responseData || {}));
-                    
-                    // FALLBACK: Se backend não retornou response válido, usar mensagem padrão
-                    const fallbackMessage = "Obrigado pela sua mensagem! Nossa equipe entrará em contato em breve.";
-                    if (this.rateLimit.canSendFallback(from)) {
-                        await this.sendMessage(from, fallbackMessage);
-                        await saveMessageToFirebase(from, fallbackMessage, 'sent');
-                        console.log('📤 Mensagem fallback enviada devido a response inválido');
-                    }
+                    // ✅ CORREÇÃO: Response vazio ou inválido - não enviar nada, apenas logar
+                    console.log('🔇 Response vazio ou inválido - nenhuma mensagem enviada');
+                    console.log('📋 Response recebido:', JSON.stringify(responseData?.response));
                 }
             } else {
                 const errorText = await response.text();

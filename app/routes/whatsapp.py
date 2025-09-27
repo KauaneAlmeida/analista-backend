@@ -652,7 +652,7 @@ async def test_whatsapp_flows(request: dict):
                         "session_id": f"test_button_{int(datetime.now().timestamp())}",
                         "phone_number": test_phone,
                         "source": "landing_button"
-                    }
+                    "response": ""  # ✅ CAMPO VAZIO - Node.js agora trata corretamente
                 }
             },
             "note": "Use POST /whatsapp/authorize com os test_data para testar"
